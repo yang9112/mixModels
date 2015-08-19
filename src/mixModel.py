@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 import sys
 import numpy as np
-import jieba.posseg as pseg
 
 from dataTreater import DataTreater
 from preTreater import PreTreater
 from models import Models
 from sklearn import cross_validation
-from scipy.sparse import csr_matrix
 from sklearn.externals import joblib
 
 reload(sys)
@@ -81,7 +79,6 @@ class MixModel():
             print 'load model failed! please ensure the model is exist.'
             sys.exit(1)
         
-        
         self.test(traindict, lrclf, svmclf, rfclf)
         
     def demo(self):
@@ -106,22 +103,29 @@ class MixModel():
 
     def test(self, traindict, lrclf, svmclf, rfclf):
         [title, content] = self.DT.getTestExcel(self.originDataFile)
+        [title, content, result] = self.DT.readExcel(self.originDataFile)
+        PT = PreTreater()
+        keydata = PT.getKeywords(content[0:150])
+        testData = PT.createTrainData_withdict(traindict, keydata)
         
-        for i in range(100):
-            seg_list = pseg.cut(content[i].encode('utf8'))
-            keys = []
-            data = []
-            for w in seg_list:
-                if w.flag in ['a', 'e', 'u', 'vn', 'vd', 'v', 'i', 'an', 'z']:
-                    try:
-                        keys.append(traindict[w.word.encode('utf8')])
-                        data.append(1)  
-                    except:
-                        continue
-            pred_vector = csr_matrix((data, keys, [0,len(keys)]), shape=(1, len(traindict)), dtype=int)
-            print rfclf.predict(list(lrclf.predict(pred_vector)) + 
-                                list(svmclf.predict(pred_vector)))
+        fp = open('for_test.log', 'wb')        
+        
+        lr_result = lrclf.predict(testData)
+        svm_result = svmclf.predict(testData)
+                
+        rf_result = rfclf.predict(np.column_stack((lr_result, svm_result)))
 
+        score = 0.0       
+        for i in range(150):
+            if list(rf_result)[i] - result[i] == 0:
+                score = score + 1
+        print score/150
+        
+        for i in range(150):       
+            fp.write(title[i].encode('utf8') + ' ' + str(rf_result[i]) + '\n')
+            
+        fp.close()
+        
 if __name__ == '__main__':
 #    dataFile = '../data/trainData.npy'
 #    dataDictFile = '../data/trainDict.npy'
@@ -131,6 +135,6 @@ if __name__ == '__main__':
     
     MM = MixModel()
     #MM.pretreatment()
-    #MM.demo()
     #MM.build_model()
-    MM.predict()
+    MM.predict()    
+    #MM.demo()

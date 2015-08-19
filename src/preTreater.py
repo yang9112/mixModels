@@ -45,7 +45,8 @@ class PreTreater():
                 data.append(1)
             indptr.append(len(indices))
             
-        return csr_matrix((data, indices, indptr), dtype=int)
+        return csr_matrix((data, indices, indptr),
+                          shape=(len(indptr) - 1, len(directory)), dtype=int)
         
     def createTrainData(self, keyData):
         indptr = [0]

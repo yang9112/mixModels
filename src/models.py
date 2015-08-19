@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
-from sklearn.linear_model import LogisticRegression
 from sklearn import svm
+from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 reload(sys)
@@ -10,7 +10,7 @@ sys.setdefaultencoding('utf-8')
 class Models():
     lrclf = LogisticRegression()
     svmclf = svm.SVC(kernel='linear')
-    rfclf = RandomForestClassifier()
+    rfclf = RandomForestClassifier(n_estimators=100)
     
     def __init__(self):
         pass
