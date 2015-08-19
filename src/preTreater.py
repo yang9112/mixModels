@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+
+import jieba
+import jieba.posseg as pseg
+from scipy.sparse import csr_matrix
+
+class PreTreater():
+    def __init__(self):
+        pass
+    
+    def getKeywords(self, tables):
+        keys = []
+        for content in tables:
+            seg_list = pseg.cut(content.encode('utf8'))
+            #print '/'.join(seg_list)
+            seg = []
+            for w in seg_list:
+                if w.flag in ['a', 'e', 'u', 'vn', 'vd', 'v', 'i', 'an', 'z']:
+                    seg.append(w.word.encode('utf8'))
+            
+            keys.append(seg)
+        
+        return keys
+
+    def getDict(self):
+        directory = dict()
+        fp = open(jieba.DEFAULT_DICT, 'rb')
+        for line in fp.readlines():
+            if line.split()[2] == 'n':
+                continue
+            directory.setdefault(line.split(' ')[0], len(directory))
+        fp.close()
+        
+        return directory
+    
+    def createTrainData_withdict(self, directory, keyData):
+        indptr = [0]
+        indices = []
+        data = []
+        
+        for d in keyData:
+            for term in d:
+                if term not in directory:
+                    print term
+                index = directory.setdefault(term, len(directory))    
+                indices.append(index)
+                data.append(1)
+            indptr.append(len(indices))
+            
+        return csr_matrix((data, indices, indptr), dtype=int)
+        
+    def createTrainData(self, keyData):
+        indptr = [0]
+        indices = []
+        data = []
+        vocabulary = {}
+        
+        for d in keyData:
+            for term in d:
+                index = vocabulary.setdefault(term, len(vocabulary))    
+                indices.append(index)
+                data.append(1)
+            indptr.append(len(indices))
+            
+        return vocabulary, csr_matrix((data, indices, indptr), dtype=int)
+        
+if __name__ == '__main__':
+    from dataTreater import DataTreater
+    DT = DataTreater()
+    [title, content, result] = DT.readExcel('train.xlsx')
+    PT = PreTreater()
+    keydata = PT.getKeywords(content)
+    traindict = PT.getDict()    
+
+    #trainData = PT.createTrainData_withdict(traindict, keydata)
