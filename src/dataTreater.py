@@ -66,4 +66,4 @@ class DataTreater():
             
 if __name__ == '__main__':
     DT = DataTreater()
-    [title_data, content_data, result_data] = DT.readExcel('train.xlsx')
+    [title_data, content_data, result_data] = DT.readExcel('../data/train.xlsx')

@@ -40,8 +40,6 @@ class PreTreater():
         
         for d in keyData:
             for term in d:
-                if term not in directory:
-                    print term
                 index = directory.setdefault(term, len(directory))    
                 indices.append(index)
                 data.append(1)
@@ -67,7 +65,7 @@ class PreTreater():
 if __name__ == '__main__':
     from dataTreater import DataTreater
     DT = DataTreater()
-    [title, content, result] = DT.readExcel('train.xlsx')
+    [title, content, result] = DT.readExcel('../data/train.xlsx')
     PT = PreTreater()
     keydata = PT.getKeywords(content)
     traindict = PT.getDict()    
