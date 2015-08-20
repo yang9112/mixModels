@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
+import time
+import random
 import numpy as np
 
 from dataTreater import DataTreater
@@ -14,15 +16,20 @@ sys.setdefaultencoding('utf-8')
 class MixModel():
     DT = DataTreater()
 
-    def __init__(self, dataFile = '../data/trainData.npy', 
-                 dataDictFile = '../data/trainDict.npy',
-                 originDataFile = '../data/train.xlsx',
+    def __init__(self,
+                 dataFile = '../data/data.npy',
+                 dataFileTrain = '../data/trainData.npy',
+                 dataFileTest = '../data/testData.npy',
+                 dataDictFile = '../data/dataDict.npy',
+                 originDataFile = '../data/data.xlsx',
                  lrModelFile = '../models/lrModel',
                  svmModelFile = '../models/svmModel',
                  rfModelFile = '../models/rfModel'
                  ):
                      
         self.dataFile = dataFile
+        self.dataFileTrain = dataFileTrain
+        self.dataFileTest = dataFileTest
         self.dataDictFile = dataDictFile
         self.originDataFile = originDataFile
         self.lrModelFile = lrModelFile
@@ -32,26 +39,37 @@ class MixModel():
     def pretreatment(self):
         #read data
         [title, content, result] = self.DT.readExcel(self.originDataFile)
-        PT = PreTreater()
-        keydata = PT.getKeywords(content)
-        traindict = PT.getDict()
 
-        trainData = PT.createTrainData_withdict(traindict, keydata)
-        
-        np.save(self.dataFile, [trainData, result])
-        np.save(self.dataDictFile, [traindict])
-        
-    def build_model(self, save_log = True):
-        #load data
-        [trainData, result] = np.load(self.dataFile)
-        
         for i in range(len(result)):
             if result[i] < 0:
                 result[i] = -1
-                
-        #train model
+            
+        PT = PreTreater()
+        keydata = PT.getKeywords(content)
+        datadict = PT.getDict()
+        trainData = PT.createTrainData_withdict(datadict, keydata)
+
+        np.save(self.dataFile, [trainData, result])
+        np.save(self.dataDictFile, [datadict])
+        self.split_train_test([trainData, result])
+
+    def split_train_test(self, data = '', rs=0):
+        if data:
+            [trainData, result] = data
+        else:
+            [trainData, result] = np.load(self.dataFile)
+
         [x_tr, x_te, y_tr, y_te] = cross_validation.train_test_split(trainData,
-                                    result, test_size = 0.1, random_state=2)
+                            result, test_size = 0.2, random_state=rs)
+
+        np.save(self.dataFileTrain, [x_tr, y_tr])
+        np.save(self.dataFileTest, [x_te, y_te])
+        
+    def build_model(self, save_log = True):
+        #load data
+        [x_tr, y_tr] = np.load(self.dataFileTrain)
+        
+        #train model
         models = Models()                                    
         lrclf = models.lrdemo(x_tr, y_tr)
         svmclf = models.svmdemo(x_tr, y_tr)
@@ -69,7 +87,7 @@ class MixModel():
         
     def predict(self):
          #load data
-        [traindict] = np.load(self.dataDictFile)
+        [datadict] = np.load(self.dataDictFile)
         
         try:       
             lrclf = joblib.load(self.lrModelFile)
@@ -79,34 +97,17 @@ class MixModel():
             print 'load model failed! please ensure the model is exist.'
             sys.exit(1)
         
-        self.test(traindict, lrclf, svmclf, rfclf)
-        
-    def demo(self):
-        #load data
-        [trainData, result] = np.load(self.dataFile)
-        [traindict] = np.load(self.dataDictFile)
-        
-        for i in range(len(result)):
-            if result[i] < 0:
-                result[i] = -1
-                
-        #train model
-        [x_tr, x_te, y_tr, y_te] = cross_validation.train_test_split(trainData,
-                                    result, test_size = 0.2, random_state=2)
-        models = Models()                                    
-        clf = models.demo(x_tr, y_tr)
-        
-#        for i in range(len(y_te)):
-#            print clf.predict(x_te[i,:]), y_te[i]
+        self.cross_test(lrclf, svmclf, rfclf)
+        #self.test(datadict, lrclf, svmclf, rfclf)
             
-        self.test(traindict, clf)
+    def demo(self):
+        pass
 
-    def test(self, traindict, lrclf, svmclf, rfclf):
-        [title, content] = self.DT.getTestExcel(self.originDataFile)
+    def test(self, datadict, lrclf, svmclf, rfclf):
         [title, content, result] = self.DT.readExcel(self.originDataFile)
         PT = PreTreater()
         keydata = PT.getKeywords(content[0:150])
-        testData = PT.createTrainData_withdict(traindict, keydata)
+        testData = PT.createTrainData_withdict(datadict, keydata)
         
         fp = open('for_test.log', 'wb')        
         
@@ -126,15 +127,43 @@ class MixModel():
             
         fp.close()
         
+    def cross_test(self, lrclf, svmclf, rfclf):
+        [testData, result] = np.load(self.dataFileTest)
+        lr_result = lrclf.predict(testData)
+        svm_result = svmclf.predict(testData)
+        
+        rf_result = rfclf.predict(np.column_stack((lr_result, svm_result)))
+        
+        precision = 0.0
+        precision_abs = 0.0
+        
+        for i in range(rf_result.shape[0]):
+            gap = list(rf_result)[i] - result[i]
+            if gap == 0:
+                precision = precision + 1
+            if abs(gap) <= 1:
+                precision_abs = precision_abs + 1
+        print precision/rf_result.shape[0]
+        print precision_abs/rf_result.shape[0]
+        #print rfclf.score(np.column_stack((lr_result, svm_result)), result)
+        
 if __name__ == '__main__':
-#    dataFile = '../data/trainData.npy'
-#    dataDictFile = '../data/trainDict.npy'
-#    originDataFile = '../data/train.xlsx'
+#    dataFile = '../data/data.npy'
+#    dataFileTrain = '../data/trainData.npy'
+#    dataFileTest = '../data/testData.npy'
+#    dataDictFile = '../data/dataDict.npy'
+#    originDataFile = '../data/data.xlsx'
 #    lrModelFile = '../models/lrModel'
 #    svmModelFile = '../models/svmModel'
+#    rfModelFile = '../models/rfModel'
     
     MM = MixModel()
+    start = time.time()
     #MM.pretreatment()
-    #MM.build_model()
-    MM.predict()    
-    #MM.demo()
+#    print 'Pretreatment Cost: %s second' % str(time.time() - start)
+    for i in range(5):
+        MM.split_train_test(rs=random.randint(1,99))
+        MM.build_model()
+        print 'build model Cost: %s second' % str(time.time() - start)
+        MM.predict()
+        print 'predict model Cost: %s second' % str(time.time() - start)

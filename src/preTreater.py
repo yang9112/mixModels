@@ -18,13 +18,14 @@ class PreTreater():
                 if w.flag in ['a', 'e', 'u', 'vn', 'vd', 'v', 'i', 'an', 'z']:
                     seg.append(w.word.encode('utf8'))
             
-            keys.append(seg)
+            keys.append(list(set(seg)))
         
         return keys
 
     def getDict(self):
         directory = dict()
         fp = open(jieba.DEFAULT_DICT, 'rb')
+        #fp = open('../data/score.txt', 'rb')
         for line in fp.readlines():
             if line.split()[2] == 'n':
                 continue
@@ -40,6 +41,8 @@ class PreTreater():
         
         for d in keyData:
             for term in d:
+                if term not in directory:
+                    continue
                 index = directory.setdefault(term, len(directory))    
                 indices.append(index)
                 data.append(1)
@@ -66,7 +69,7 @@ class PreTreater():
 if __name__ == '__main__':
     from dataTreater import DataTreater
     DT = DataTreater()
-    [title, content, result] = DT.readExcel('../data/train.xlsx')
+    [title, content, result] = DT.readExcel('../data/data.xlsx')
     PT = PreTreater()
     keydata = PT.getKeywords(content)
     traindict = PT.getDict()    
