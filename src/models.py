@@ -11,7 +11,7 @@ sys.setdefaultencoding('utf-8')
 
 class Models():
     lrclf = LogisticRegression()
-    svmclf = svm.SVC(kernel='rbf', C=1)
+    svmclf = svm.SVC(kernel='rbf', C=2)
     rfclf = RandomForestClassifier(n_estimators=200, min_samples_split=1)
     
     def __init__(self):

@@ -20,8 +20,10 @@ class MixModel():
                  dataFile = '../data/data.npy',
                  dataFileTrain = '../data/trainData.npy',
                  dataFileTest = '../data/testData.npy',
+                 testIndex = '../data/testIndex.npy',
                  dataDictFile = '../data/dataDict.npy',
                  originDataFile = '../data/data.xlsx',
+                 dictResult = '../data/dictResult.npy',
                  lrModelFile = '../models/lrModel',
                  svmModelFile = '../models/svmModel',
                  rfModelFile = '../models/rfModel'
@@ -30,8 +32,10 @@ class MixModel():
         self.dataFile = dataFile
         self.dataFileTrain = dataFileTrain
         self.dataFileTest = dataFileTest
+        self.testIndex = testIndex
         self.dataDictFile = dataDictFile
         self.originDataFile = originDataFile
+        self.dictResult = dictResult
         self.lrModelFile = lrModelFile
         self.svmModelFile = svmModelFile
         self.rfModelFile = rfModelFile
@@ -49,38 +53,53 @@ class MixModel():
         datadict = PT.getDict()
         trainData = PT.createTrainData_withdict(datadict, keydata)
 
-        np.save(self.dataFile, [trainData, result])
-        np.save(self.dataDictFile, [datadict])
-        self.split_train_test([trainData, result])
-
-    def split_train_test(self, data = '', rs=0):
-        if data:
-            [trainData, result] = data
-        else:
-            [trainData, result] = np.load(self.dataFile)
-
-        [x_tr, x_te, y_tr, y_te] = cross_validation.train_test_split(trainData,
-                            result, test_size = 0.2, random_state=rs)
-
-        np.save(self.dataFileTrain, [x_tr, y_tr])
-        np.save(self.dataFileTest, [x_te, y_te])
+        cv = cross_validation.ShuffleSplit(len(result), n_iter=5, 
+                                           test_size = 0.2, random_state=random.randint(0,100))
+        tt_idx = [[m, n] for m,n in cv]
         
-    def build_model(self, save_log = True):
+        np.save(self.dataFile, [trainData, np.array(result)])
+        np.save(self.dataDictFile, [datadict])
+        np.save(self.testIndex, [tt_idx])
+        
+    def createTrainTest(self, idx_id = -1):
+        [trainData, result] = np.load(self.dataFile)
+        [tt_idx] = np.load(self.testIndex)
+        
+        if idx_id >= 0 and idx_id < len(tt_idx):            
+            x_tr = trainData[tt_idx[idx_id][0], :]
+            x_te = trainData[tt_idx[idx_id][1], :]
+            y_tr = result[tt_idx[idx_id][0]]
+            y_te = result[tt_idx[idx_id][1]]
+            np.save(self.dataFileTrain, [tt_idx[idx_id][0], x_tr, y_tr]) 
+            np.save(self.dataFileTest, [tt_idx[idx_id][1], x_te, y_te])
+        else:
+            x_tr = trainData
+            x_te = result
+            np.save(self.dataFileTrain, [x_tr, y_tr])
+        
+            
+    def build_model(self, save_tag = True):
         #load data
-        [x_tr, y_tr] = np.load(self.dataFileTrain)
+        tr_data = np.load(self.dataFileTrain)
+        if len(tr_data) == 2:
+            [x_tr, y_tr] = tr_data
+        else:
+            [tt_idx, x_tr, y_tr] = tr_data
         
         #train model
         models = Models()                                    
         lrclf = models.lrdemo(x_tr, y_tr)
         svmclf = models.svmdemo(x_tr, y_tr)
         
-        x_tr_second = []
-        for i in range(x_tr.shape[0]):        
-            x_tr_second.append(list(lrclf.predict(x_tr[i])) + list(svmclf.predict(x_tr[i])))
-        #x_tr_second = np.array(x_tr_second)
+        if len(tr_data) == 2:
+            x_tr_second = np.column_stack((lrclf.predict(x_tr), svmclf.predict(x_tr)))
+        else:
+            dicResult = np.array(np.load(self.dictResult)[0])[tt_idx]
+            x_tr_second = np.column_stack((lrclf.predict(x_tr), svmclf.predict(x_tr), dicResult))
+
         rfclf = models.rfdemo(x_tr_second, y_tr)
         
-        if save_log:
+        if save_tag:
             joblib.dump(lrclf, self.lrModelFile)
             joblib.dump(svmclf, self.svmModelFile)
             joblib.dump(rfclf, self.rfModelFile)        
@@ -113,7 +132,7 @@ class MixModel():
         
         lr_result = lrclf.predict(testData)
         svm_result = svmclf.predict(testData)
-                
+        
         rf_result = rfclf.predict(np.column_stack((lr_result, svm_result)))
 
         score = 0.0       
@@ -128,11 +147,13 @@ class MixModel():
         fp.close()
         
     def cross_test(self, lrclf, svmclf, rfclf):
-        [testData, result] = np.load(self.dataFileTest)
+        [tt_idx, testData, result] = np.load(self.dataFileTest)
+        [dic_result] = np.load(self.dictResult)
         lr_result = lrclf.predict(testData)
         svm_result = svmclf.predict(testData)
         
-        rf_result = rfclf.predict(np.column_stack((lr_result, svm_result)))
+        dic_result = np.array(dic_result)[tt_idx]
+        rf_result = rfclf.predict(np.column_stack((lr_result, svm_result, dic_result)))
         
         precision = 0.0
         precision_abs = 0.0
@@ -160,9 +181,9 @@ if __name__ == '__main__':
     MM = MixModel()
     start = time.time()
     #MM.pretreatment()
-#    print 'Pretreatment Cost: %s second' % str(time.time() - start)
+    print 'Pretreatment Cost: %s second' % str(time.time() - start)
     for i in range(5):
-        MM.split_train_test(rs=random.randint(1,99))
+        MM.createTrainTest(i)
         MM.build_model()
         print 'build model Cost: %s second' % str(time.time() - start)
         MM.predict()
