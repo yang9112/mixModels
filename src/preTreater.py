@@ -7,19 +7,23 @@ from scipy.sparse import csr_matrix
 class PreTreater():
     def __init__(self):
         pass
-    
-    def getKeywords(self, tables):
+
+    def getKeywords(self, tables, all_tag = False):
         keys = []
         for content in tables:
             seg_list = pseg.cut(content.encode('utf8'))
             #print '/'.join(seg_list)
             seg = []
-            for w in seg_list:
-                if w.flag in ['a', 'e', 'u', 'vn', 'vd', 'v', 'i', 'an', 'z']:
+            if not all_tag:
+                for w in seg_list:
+                    if w.flag in ['a', 'e', 'u', 'vn', 'vd', 'v', 'i', 'an', 'z']:
+                        seg.append(w.word.encode('utf8'))
+            else:
+                for w in seg_list:
                     seg.append(w.word.encode('utf8'))
-            
+
             keys.append(list(set(seg)))
-        
+
         return keys
 
     def getDict(self):
@@ -31,47 +35,47 @@ class PreTreater():
                 continue
             directory.setdefault(line.split(' ')[0], len(directory))
         fp.close()
-        
+
         return directory
-    
+
     def createTrainData_withdict(self, directory, keyData):
         indptr = [0]
         indices = []
         data = []
-        
+
         for d in keyData:
             for term in d:
                 if term not in directory:
                     continue
-                index = directory.setdefault(term, len(directory))    
+                index = directory.setdefault(term, len(directory))
                 indices.append(index)
                 data.append(1)
             indptr.append(len(indices))
-            
+
         return csr_matrix((data, indices, indptr),
                           shape=(len(indptr) - 1, len(directory)), dtype=int)
-        
+
     def createTrainData(self, keyData):
         indptr = [0]
         indices = []
         data = []
         vocabulary = {}
-        
+
         for d in keyData:
             for term in d:
-                index = vocabulary.setdefault(term, len(vocabulary))    
+                index = vocabulary.setdefault(term, len(vocabulary))
                 indices.append(index)
                 data.append(1)
             indptr.append(len(indices))
-            
+
         return vocabulary, csr_matrix((data, indices, indptr), dtype=int)
-        
+
 if __name__ == '__main__':
     from dataTreater import DataTreater
     DT = DataTreater()
     [title, content, result] = DT.readExcel('../data/data.xlsx')
     PT = PreTreater()
     keydata = PT.getKeywords(content)
-    traindict = PT.getDict()    
+    traindict = PT.getDict()
 
     #trainData = PT.createTrainData_withdict(traindict, keydata)
