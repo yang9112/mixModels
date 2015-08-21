@@ -113,7 +113,7 @@ class MixModel():
             x_te = result
             np.save(self.dataFileTrain, [x_tr, y_tr])
 
-    def build_model(self, save_tag = True):
+    def buildModel(self, save_tag = True):
         #load data
         tr_data = np.load(self.dataFileTrain)
         if self.modelType == 0 or self.modelType == 2:
@@ -155,8 +155,6 @@ class MixModel():
 
     def predict(self):
          #load data
-        [datadict] = np.load(self.dataDictFile)
-
         try:
             lrclf = joblib.load(self.lrModelFile)
             lrtclf = joblib.load(self.lrTModelFile)
@@ -166,7 +164,8 @@ class MixModel():
             print 'load model failed! please ensure the model is exist.'
             sys.exit(1)
 
-        self.cross_test(lrclf, lrtclf, svmclf, rfclf)
+        self.crossTest(lrclf, lrtclf, svmclf, rfclf)
+        #[datadict] = np.load(self.dataDictFile)
         #self.test(datadict, lrclf, svmclf, rfclf)
 
     def demo(self):
@@ -196,7 +195,7 @@ class MixModel():
 #
 #        fp.close()
 
-    def cross_test(self, lrclf, lrtclf, svmclf, rfclf):
+    def crossTest(self, lrclf, lrtclf, svmclf, rfclf):
         #load data
         tr_data = np.load(self.dataFileTest)
         if self.modelType == 0 or self.modelType == 2:
@@ -286,7 +285,7 @@ if __name__ == '__main__':
     MM.createRandomSeed(922)
     for i in range(5):
         MM.createTrainTest(idx_id = i)
-        MM.build_model()
+        MM.buildModel()
         print 'build model Cost: %s second' % str(time.time() - start)
         MM.predict()
         print 'predict model Cost: %s second' % str(time.time() - start)
