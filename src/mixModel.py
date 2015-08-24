@@ -21,6 +21,7 @@ class MixModel():
     1: lrModel, svmModel, dictModel
     2: lrModel, lrTModel, svmModel
     3: lrModel, lrTModel, svmModel, dictModel
+    4: lrModel, lrTmodel
     ...
     """
     modelType = 0
@@ -70,25 +71,34 @@ class MixModel():
         PT = PreTreater()
         keydata = PT.getKeywords(content)
         datadict = PT.getDict()
-        trainData = PT.createTrainData_withdict(datadict, keydata)
+        trainData = PT.createTrainDataDict(datadict, keydata)
+        #trainData = self.normalizeData(trainData)
 
-        if self.modelType == 2 or self.modelType == 3:
-            keydata_title = PT.getKeywords(title, all_tag=True)
-            trainTitleData = PT.createTrainData_withdict(datadict, keydata_title)
-            np.save(self.dataDictFile, [datadict])
-            np.save(self.dataTitleFile, [trainTitleData])
+        #if self.modelType == 2 or self.modelType == 3:
+        keydata_title = PT.getKeywords(title, all_tag=True)
+        trainTitleData = PT.createTrainDataDict(datadict, keydata_title)
+        np.save(self.dataDictFile, [datadict])
+        np.save(self.dataTitleFile, [trainTitleData])
 
         np.save(self.dataFile, [trainData, np.array(result)])
 
         self.createRandomSeed(len(result))
 
+    def normalizeData(self, data):
+        row_sums = data.sum(axis=1)[:, 0]
+        row_indices, col_indices = data.nonzero()
+        data[row_indices, col_indices] /= row_sums[row_indices].T
+        return data
+
     def createRandomSeed(self, n_sample):
-#        cv = cross_validation.ShuffleSplit(n_sample, n_iter=5,
-#                                           test_size = 0.2, random_state=random.randint(0,100))
-        sample_list = np.array(range(n_sample))
-        random.shuffle(sample_list)
-        cv = cross_validation.KFold(n_sample, n_folds=5)
-        tt_idx = [[sample_list[m], sample_list[n]] for m,n in cv]
+        cv = cross_validation.ShuffleSplit(n_sample, n_iter=5,
+                                           test_size = 0.2, random_state=random.randint(0,100))
+        tt_idx = [[m,n] for m,n in cv]
+
+#        sample_list = np.array(range(n_sample))
+#        random.shuffle(sample_list)
+#        cv = cross_validation.KFold(n_sample, n_folds=5)
+#        tt_idx = [[sample_list[m], sample_list[n]] for m,n in cv]
 
         np.save(self.dataIndex, [tt_idx])
 
@@ -105,12 +115,8 @@ class MixModel():
             y_tr = result[tt_idx[idx_id][0]]
             y_te = result[tt_idx[idx_id][1]]
 
-            if self.modelType == 1 or self.modelType == 3:
-                np.save(self.dataFileTrain, [tt_idx[idx_id][0], x_tr, y_tr])
-                np.save(self.dataFileTest, [tt_idx[idx_id][1], x_te, y_te])
-            else:
-                np.save(self.dataFileTrain, [x_tr, y_tr])
-                np.save(self.dataFileTest, [x_te, y_te])
+            np.save(self.dataFileTrain, [tt_idx[idx_id][0], x_tr, y_tr])
+            np.save(self.dataFileTest, [tt_idx[idx_id][1], x_te, y_te])
 
             if self.modelType == 2 or self.modelType == 3:
                 x_tr_title = trainTitleData[tt_idx[idx_id][0], :]
@@ -125,24 +131,18 @@ class MixModel():
     def buildModel(self, save_tag = True):
         #load data
         tr_data = np.load(self.dataFileTrain)
-        if self.modelType == 0 or self.modelType == 2:
-            [x_tr, y_tr] = tr_data
-        elif self.modelType == 1 or self.modelType == 3:
-            [tt_idx, x_tr, y_tr] = tr_data
-        else:
-            print 'modelType Error'
-            sys.exit(2)
+        [tt_idx, x_tr, y_tr] = tr_data
 
-        if self.modelType == 2 or self.modelType == 3:
+        if self.modelType == 2 or self.modelType == 3 or self.modelType == 4:
             [x_tr_title, y_tr] = np.load(self.dataFileTitleTrain)
 
         #train model
         models = Models()
-        lrclf = models.lrdemo(x_tr, y_tr)
-        svmclf = models.svmdemo(x_tr, y_tr)
+        lrclf = models.lrDemo(x_tr, y_tr)
+        svmclf = models.svmDemo(x_tr, y_tr)
 
-        if self.modelType == 2 or self.modelType == 3:
-            lrclf_title = models.lrdemo(x_tr_title, y_tr)
+        if self.modelType == 2 or self.modelType == 3 or self.modelType == 4:
+            lrclf_title = models.lrDemo(x_tr_title, y_tr)
 
         #get the features
         if self.modelType == 0:
@@ -153,12 +153,14 @@ class MixModel():
         elif self.modelType == 2:
             x_tr_second = np.column_stack((lrclf.predict(x_tr), lrclf_title.predict(x_tr_title),
                                            svmclf.predict(x_tr)))
-        else:
+        elif self.modelType == 3:
             dicResult = np.array(np.load(self.dictResult)[0])[tt_idx]
             x_tr_second = np.column_stack((lrclf.predict(x_tr), lrclf_title.predict(x_tr_title),
                                            svmclf.predict(x_tr), dicResult))
+        elif self.modelType == 4:
+            x_tr_second = np.column_stack((lrclf.predict(x_tr), lrclf_title.predict(x_tr_title)))
 
-        rfclf = models.rfdemo(x_tr_second, y_tr)
+        rfclf = models.rfDemo(x_tr_second, y_tr)
 
         if save_tag:
             joblib.dump(lrclf, self.lrModelFile)
@@ -168,17 +170,22 @@ class MixModel():
                 joblib.dump(lrclf_title, self.lrTModelFile)
 
     def predict(self):
-         #load data
-        try:
+         #load models
+        rfclf = joblib.load(self.rfModelFile)
+        if self.modelType < 4:
+            lrclf = joblib.load(self.lrModelFile)
+            svmclf = joblib.load(self.svmModelFile)
+            feature_models = [lrclf, svmclf, rfclf]
+            if self.modelType == 2 or self.modelType == 3:
+                lrtclf = joblib.load(self.lrTModelFile)
+                feature_models = [lrclf, lrtclf, svmclf, rfclf]
+        elif self.modelType == 4:
             lrclf = joblib.load(self.lrModelFile)
             lrtclf = joblib.load(self.lrTModelFile)
-            svmclf = joblib.load(self.svmModelFile)
-            rfclf = joblib.load(self.rfModelFile)
-        except:
-            print 'load model failed! please ensure the model is exist.'
-            sys.exit(1)
+            feature_models = [lrclf, lrtclf, rfclf]
+            
 
-        self.crossTest(lrclf, lrtclf, svmclf, rfclf)
+        self.crossTest(feature_models)
         #[datadict] = np.load(self.dataDictFile)
         #self.test(datadict, lrclf, svmclf, rfclf)
 
@@ -189,7 +196,7 @@ class MixModel():
 #        [title, content, result] = self.DT.readExcel(self.originDataFile)
 #        PT = PreTreater()
 #        keydata = PT.getKeywords(content[0:150])
-#        testData = PT.createTrainData_withdict(datadict, keydata)
+#        testData = PT.createTrainDataDict(datadict, keydata)
 #
 #        fp = open('for_test.log', 'wb')
 #
@@ -209,23 +216,26 @@ class MixModel():
 #
 #        fp.close()
 
-    def crossTest(self, lrclf, lrtclf, svmclf, rfclf, evalTag = True):
-        #load data
-        tr_data = np.load(self.dataFileTest)
-        if self.modelType == 0 or self.modelType == 2:
-            [x_te, y_te] = tr_data
-        elif self.modelType == 1 or self.modelType == 3:
-            [tt_idx, x_te, y_te] = np.load(self.dataFileTest)
-        else:
-            print 'modelType Error'
-            sys.exit(2)
+    def crossTest(self, feature_models, evalTag = True):
+        #load model
+        if self.modelType <= 3:
+            if self.modelType == 2 or self.modelType == 3:
+                [lrclf, lrtclf, svmclf, rfclf] = feature_models
+            else:
+                [lrclf, svmclf, rfclf] = feature_models
+        elif self.modelType == 4:
+            [lrclf, lrtclf, rfclf] = feature_models
 
-        if self.modelType == 2 or self.modelType == 3:
+        #load data
+        [tt_idx, x_te, y_te] = np.load(self.dataFileTest)
+
+        if self.modelType == 2 or self.modelType == 3 or self.modelType == 4:
             [x_te_title, y_te] = np.load(self.dataFileTitleTest)
             lrt_result = lrtclf.predict(x_te_title)
 
-        lr_result = lrclf.predict(x_te)
-        svm_result = svmclf.predict(x_te)
+        lr_result = lrclf.predict(x_te)        
+        if self.modelType <= 3:
+            svm_result = svmclf.predict(x_te)
 
         if self.modelType == 0:
             rf_result = rfclf.predict(np.column_stack((lr_result, svm_result)))
@@ -237,9 +247,17 @@ class MixModel():
         elif self.modelType == 3:
             dic_result = np.array(np.load(self.dictResult)[0])[tt_idx]
             rf_result = rfclf.predict(np.column_stack((lr_result, lrt_result, svm_result, dic_result)))
+        elif self.modelType == 4:
+            dic_result = np.array(np.load(self.dictResult)[0])[tt_idx]
+            rf_result = rfclf.predict(np.column_stack((lr_result, lrt_result)))
 
         if evalTag:
             self.evaluate(rf_result, y_te)
+
+        self.DT.writeData('../data/negative.xls', self.originDataFile,
+                          tt_idx[rf_result == -1], y_te[rf_result == -1])
+        self.DT.writeData('../data/positive.xls', self.originDataFile,
+                          tt_idx[rf_result == 1], y_te[rf_result == 1])
 
     def evaluate(self, x_te, y_te):
         #evaluate the result of models

@@ -23,6 +23,7 @@ class PreTreater():
                     seg.append(w.word.encode('utf8'))
 
             keys.append(list(set(seg)))
+            #keys.append(seg)
 
         return keys
 
@@ -38,7 +39,7 @@ class PreTreater():
 
         return directory
 
-    def createTrainData_withdict(self, directory, keyData):
+    def createTrainDataDict(self, directory, keyData):
         indptr = [0]
         indices = []
         data = []
@@ -53,7 +54,7 @@ class PreTreater():
             indptr.append(len(indices))
 
         return csr_matrix((data, indices, indptr),
-                          shape=(len(indptr) - 1, len(directory)), dtype=int)
+                          shape=(len(indptr) - 1, len(directory)), dtype=float)
 
     def createTrainData(self, keyData):
         indptr = [0]
@@ -68,7 +69,7 @@ class PreTreater():
                 data.append(1)
             indptr.append(len(indices))
 
-        return vocabulary, csr_matrix((data, indices, indptr), dtype=int)
+        return vocabulary, csr_matrix((data, indices, indptr), dtype=float)
 
 if __name__ == '__main__':
     from dataTreater import DataTreater
@@ -78,4 +79,4 @@ if __name__ == '__main__':
     keydata = PT.getKeywords(content)
     traindict = PT.getDict()
 
-    #trainData = PT.createTrainData_withdict(traindict, keydata)
+    #trainData = PT.createTrainDataDict(traindict, keydata)

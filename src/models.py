@@ -12,12 +12,13 @@ sys.setdefaultencoding('utf-8')
 class Models():
     lrclf = LogisticRegression()
     svmclf = svm.SVC(kernel='rbf', C=1.5)
-    rfclf = RandomForestClassifier(n_estimators=200, min_samples_split=1)
+    svmclf_linear = svm.SVC(kernel='linear', C=1)
+    rfclf = RandomForestClassifier(n_estimators=100, min_samples_split=1)
 
     def __init__(self):
         pass
 
-    def lrdemo(self, X, y):
+    def lrDemo(self, X, y):
 #        scores = cross_validation.cross_val_score(
 #            self.lrclf, X, y, cv=5)
 #
@@ -25,7 +26,7 @@ class Models():
         self.lrclf.fit(X, y)
         return self.lrclf
 
-    def svmdemo(self, X, y):
+    def svmDemo(self, X, y):
 #        scores = cross_validation.cross_val_score(
 #            self.svmclf, X, y, cv=5)
 #
@@ -33,6 +34,6 @@ class Models():
         self.svmclf.fit(X, y)
         return self.svmclf
 
-    def rfdemo(self, X, y):
+    def rfDemo(self, X, y):
         self.rfclf.fit(X, y)
         return self.rfclf

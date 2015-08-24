@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import re
+import os
 import csv
 import xlrd
 import xlwt
 import numpy as np
+from xlutils.copy import copy
 
 class DataTreater():
     def __init__(self):
@@ -68,6 +70,33 @@ class DataTreater():
 #            sheet.write(i, 3, col_index[col_index.index(col_index_origin[i])])
 #            sheet.write(i, 1, dict_result[i])
 #        f.save('../data/excelFile.xls')
+
+    def writeData(self, filename_save, filename_data, idx, y_te):
+        #get row number
+        nrows = 0
+        if os.path.isfile(filename_save):
+            reader = xlrd.open_workbook(filename_save)
+            sheet = reader.sheet_by_index(0)
+            nrows = sheet.nrows
+
+            wb = copy(reader)
+            sheet = wb.get_sheet(0)
+        else:
+            wb = xlwt.Workbook()
+            sheet = wb.add_sheet(u'sheet1',cell_overwrite_ok=True)
+
+        [content, title, result] = self.readExcel(filename_data)
+
+        content_write = np.array(content)[idx]
+        for i in range(len(content_write)):
+            sheet.write(i + nrows, 1, content_write[i])
+            sheet.write(i + nrows, 2, y_te[i])
+
+        title_write =  np.array(title)[idx]
+        for i in range(len(content_write)):
+            sheet.write(i + nrows, 0, title_write[i])
+
+        wb.save(filename_save)
 
 
 if __name__ == '__main__':
