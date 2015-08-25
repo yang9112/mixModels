@@ -5,18 +5,30 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
 
-
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 class Models():
     lrclf = LogisticRegression()
-    svmclf = svm.SVC(kernel='rbf', C=1.5)
+    svmclf = svm.SVC(kernel='linear', C=1)
     svmclf_linear = svm.SVC(kernel='linear', C=1)
-    rfclf = RandomForestClassifier(n_estimators=100, min_samples_split=1)
+    rfclf = RandomForestClassifier(n_estimators=200, min_samples_split=1)
 
     def __init__(self):
         pass
+
+    def selectDemo(self, key, X, y):
+        if key == 'lrModel' or key == 'lrTModel':
+            clf = self.lrDemo(X, y)
+        elif key == 'svmModel':
+            clf = self.svmDemo(X, y)
+        elif key == 'rfModel':
+            clf = self.rfDemo(X, y)
+        else:
+            print 'Error: unkown name of key!'
+            sys.exit(2)
+
+        return clf
 
     def lrDemo(self, X, y):
 #        scores = cross_validation.cross_val_score(
