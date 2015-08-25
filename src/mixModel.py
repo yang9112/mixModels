@@ -16,7 +16,7 @@ sys.setdefaultencoding('utf-8')
 class MixModel():
     DT = DataTreater()
     """
-    modelType:
+    model_type:
     0: lrModel, svmModel
     1: lrModel, svmModel, dictModel
     2: lrModel, lrTModel, svmModel
@@ -24,91 +24,93 @@ class MixModel():
     4: lrModel, lrTmodel, dictModel
     ...
     """
-    modelType = 0
-    modelDict = {'lrModel':1, 'svmModel':1, 'dictModel':0, 'lrTModel':0}
+    model_type = 0
+    model_dict = {'lrModel':1, 'svmModel':1, 'dictModel':0, 'lrTModel':0}
 
     def __init__(self,
-                 modelType = 0,
-                 dataFile = '../data/data.npy',
-                 dataTitleFile = '../data/dataTitle.npy',
-                 dataFileTrain = '../data/trainData.npy',
-                 dataFileTitleTrain = '../data/trainTitleData.npy',
-                 dataFileTest = '../data/testData.npy',
-                 dataFileTitleTest = '../data/testTitleData.npy',
-                 dataIndex = '../data/dataIndex.npy',
-                 dataDictFile = '../data/dataDict.npy',
-                 originDataFile = '../data/data.xlsx',
-                 dictResult = '../data/dictResult.npy',
-                 rfModelFile = '../models/rfModel',
-                 modelDir = '../models'
+                 model_type = 0,
+                 data_file = '../data/data.npy',
+                 data_title_file = '../data/dataTitle.npy',
+                 data_file_train = '../data/trainData.npy',
+                 data_file_title_train = '../data/trainTitleData.npy',
+                 data_file_test = '../data/testData.npy',
+                 data_file_title_test = '../data/testTitleData.npy',
+                 data_index = '../data/dataIndex.npy',
+                 data_dict_file = '../data/dataDict.npy',
+                 origin_data_file = '../data/data.xlsx',
+                 dict_result = '../data/dictResult.npy',
+                 rfmodel_file = '../models/rfModel',
+                 model_dir = '../models'
                  ):
 
-        self.modelType = modelType
-        self.dataFile = dataFile
-        self.dataTitleFile = dataTitleFile
-        self.dataFileTrain = dataFileTrain
-        self.dataFileTitleTrain = dataFileTitleTrain
-        self.dataFileTest = dataFileTest
-        self.dataFileTitleTest = dataFileTitleTest
-        self.dataIndex = dataIndex
-        self.dataDictFile = dataDictFile
-        self.originDataFile = originDataFile
-        self.dictResult = dictResult
-        self.rfModelFile = rfModelFile
-        self.modelDir = modelDir
+        self.model_type = model_type
+        self.data_file = data_file
+        self.data_title_file = data_title_file
+        self.data_file_train = data_file_train
+        self.data_file_title_train = data_file_title_train
+        self.data_file_test = data_file_test
+        self.data_file_title_test = data_file_title_test
+        self.data_index = data_index
+        self.data_dict_file = data_dict_file
+        self.origin_data_file = origin_data_file
+        self.dict_result = dict_result
+        self.rfmodel_file = rfmodel_file
+        self.model_dir = model_dir
 
         #load model type
-        self.setModelDict(self.modelType)
+        self.set_model_dict(self.model_type)
 
-    def setModelDict(self, model_type):
+    def set_model_dict(self, model_type):
         #set the dict to zero
-        for key in self.modelDict.keys():
-            self.modelDict[key] = 0
+        for key in self.model_dict.keys():
+            self.model_dict[key] = 0
 
         if model_type == 0:
-            self.modelDict.update({'lrModel':1, 'svmModel':1})
+            self.model_dict.update({'lrModel':1, 'svmModel':1})
         elif model_type == 1:
-            self.modelDict.update({'lrModel':1, 'svmModel':1, 'dictModel':1})
+            self.model_dict.update({'lrModel':1, 'svmModel':1, 'dictModel':1})
         elif model_type == 2:
-            self.modelDict.update({'lrModel':1, 'svmModel':1, 'lrTModel':1})
+            self.model_dict.update({'lrModel':1, 'svmModel':1, 'lrTModel':1})
         elif model_type == 3:
-            self.modelDict.update({'lrModel':1, 'svmModel':1, 'lrTModel':1, 'dictModel':1})
+            self.model_dict.update({'lrModel':1, 'svmModel':1,
+                                    'lrTModel':1, 'dictModel':1})
         elif model_type == 4:
-            self.modelDict.update({'lrModel':1, 'lrTModel':1, 'dictModel':1})
+            self.model_dict.update({'lrModel':1, 'lrTModel':1, 'dictModel':1})
 
     def pretreatment(self):
         #read data
-        [title, content, result] = self.DT.readExcel(self.originDataFile)
+        [title, content, result] = self.DT.read_excel(self.origin_data_file)
 
         for i in range(len(result)):
             if result[i] < 0:
                 result[i] = -1
 
         PT = PreTreater()
-        keydata = PT.getKeywords(content)
-        datadict = PT.getDict()
-        trainData = PT.createTrainDataDict(datadict, keydata)
-        #trainData = self.normalizeData(trainData)
+        keydata = PT.get_keywords(content)
+        datadict = PT.getdict()
+        traindata = PT.create_train_data_dict(datadict, keydata)
+        #traindata = self.normalize_data(trainData)
 
-        #if self.modelDict['lrTmodel']:
-        keydata_title = PT.getKeywords(title, all_tag=True)
-        trainTitleData = PT.createTrainDataDict(datadict, keydata_title)
-        np.save(self.dataDictFile, [datadict])
-        np.save(self.dataTitleFile, [trainTitleData])
+        #if self.model_dict['lrTmodel']:
+        keydata_title = PT.get_keywords(title, all_tag=True)
+        train_title_data = PT.create_train_data_dict(datadict, keydata_title)
+        np.save(self.data_dict_file, [datadict])
+        np.save(self.data_title_file, [train_title_data])
 
-        np.save(self.dataFile, [trainData, np.array(result)])
+        np.save(self.data_file, [traindata, np.array(result)])
 
-        self.createRandomSeed(len(result))
+        self.create_random_seed(len(result))
 
-    def normalizeData(self, data):
+    def normalize_data(self, data):
         row_sums = data.sum(axis=1)[:, 0]
         row_indices, col_indices = data.nonzero()
         data[row_indices, col_indices] /= row_sums[row_indices].T
         return data
 
-    def createRandomSeed(self, n_sample):
+    def create_random_seed(self, n_sample):
         cv = cross_validation.ShuffleSplit(n_sample, n_iter=5,
-                                           test_size = 0.2, random_state=random.randint(0,100))
+                                           test_size = 0.2,
+                                           random_state=random.randint(0,100))
         tt_idx = [[m,n] for m,n in cv]
 
 #        sample_list = np.array(range(n_sample))
@@ -116,43 +118,43 @@ class MixModel():
 #        cv = cross_validation.KFold(n_sample, n_folds=5)
 #        tt_idx = [[sample_list[m], sample_list[n]] for m,n in cv]
 
-        np.save(self.dataIndex, [tt_idx])
+        np.save(self.data_index, [tt_idx])
 
-    def createTrainTest(self, idx_id = -1):
-        if self.modelDict['lrTModel']:
-            [trainTitleData] = np.load(self.dataTitleFile)
+    def create_train_test(self, idx_id = -1):
+        if self.model_dict['lrTModel']:
+            [train_title_data] = np.load(self.data_title_file)
 
-        [trainData, result] = np.load(self.dataFile)
-        [tt_idx] = np.load(self.dataIndex)
+        [traindata, result] = np.load(self.data_file)
+        [tt_idx] = np.load(self.data_index)
 
         if idx_id >= 0 and idx_id < len(tt_idx):
-            x_tr = trainData[tt_idx[idx_id][0], :]
-            x_te = trainData[tt_idx[idx_id][1], :]
+            x_tr = traindata[tt_idx[idx_id][0], :]
+            x_te = traindata[tt_idx[idx_id][1], :]
             y_tr = result[tt_idx[idx_id][0]]
             y_te = result[tt_idx[idx_id][1]]
 
-            np.save(self.dataFileTrain, [tt_idx[idx_id][0], x_tr, y_tr])
-            np.save(self.dataFileTest, [tt_idx[idx_id][1], x_te, y_te])
+            np.save(self.data_file_train, [tt_idx[idx_id][0], x_tr, y_tr])
+            np.save(self.data_file_test, [tt_idx[idx_id][1], x_te, y_te])
 
-            if self.modelDict['lrTModel']:
-                x_tr_title = trainTitleData[tt_idx[idx_id][0], :]
-                x_te_title = trainTitleData[tt_idx[idx_id][1], :]
-                np.save(self.dataFileTitleTrain, [x_tr_title, y_tr])
-                np.save(self.dataFileTitleTest, [x_te_title, y_te])
+            if self.model_dict['lrTModel']:
+                x_tr_title = train_title_data[tt_idx[idx_id][0], :]
+                x_te_title = train_title_data[tt_idx[idx_id][1], :]
+                np.save(self.data_file_title_train, [x_tr_title, y_tr])
+                np.save(self.data_file_title_test, [x_te_title, y_te])
         else:
-            x_tr = trainData
+            x_tr = traindata
             x_te = result
-            np.save(self.dataFileTrain, [x_tr, y_tr])
+            np.save(self.data_file_train, [x_tr, y_tr])
 
-    def buildModel(self, save_tag = True):
+    def build_model(self, save_tag = True):
         #load data
-        tr_data = np.load(self.dataFileTrain)
+        tr_data = np.load(self.data_file_train)
         [tt_idx, x_tr, y_tr] = tr_data
 
-        if self.modelDict['lrTModel']:
-            [x_tr_title, y_tr] = np.load(self.dataFileTitleTrain)
-        if self.modelDict['dictModel']:
-            dicResult = np.array(np.load(self.dictResult)[0], dtype=float)[tt_idx]
+        if self.model_dict['lrTModel']:
+            [x_tr_title, y_tr] = np.load(self.data_file_title_train)
+        if self.model_dict['dictModel']:
+            dicResult = np.array(np.load(self.dict_result)[0], dtype=float)[tt_idx]
 
         mid = int(x_tr.shape[0]/2)
         #train model
@@ -160,27 +162,27 @@ class MixModel():
 
         #get the features
         n_features = []
-        for key in self.modelDict.keys():
+        for key in self.model_dict.keys():
             #remove the models unused
-            if not self.modelDict[key]:
+            if not self.model_dict[key]:
                 continue
 
             x_train = x_tr
             if key == 'dictModel':
                 n_features.append(dicResult)
                 continue
-            elif key == 'lrTModel' and self.modelDict[key]:
+            elif key == 'lrTModel' and self.model_dict[key]:
                 x_train = x_tr_title
 
-            if self.modelDict[key]:
-                clf = models.selectDemo(key, x_train[:mid, :], y_tr[:mid])
+            if self.model_dict[key]:
+                clf = models.select_demo(key, x_train[:mid, :], y_tr[:mid])
                 mid_to_end = list(clf.predict(x_train[mid:,:]))
-                clf = models.selectDemo(key, x_train[mid:, :], y_tr[mid:])
+                clf = models.select_demo(key, x_train[mid:, :], y_tr[mid:])
                 top_to_mid = list(clf.predict(x_train[:mid, :]))
                 n_features.append(np.array(top_to_mid + mid_to_end))
-                clf = models.selectDemo(key, x_train, y_tr)
+                clf = models.select_demo(key, x_train, y_tr)
                 if save_tag:
-                    joblib.dump(clf, self.modelDir + '/' + key)
+                    joblib.dump(clf, self.model_dir + '/' + key)
 
         if len(n_features) > 1:
             x_tr_second = np.column_stack(tuple(n_features))
@@ -189,32 +191,32 @@ class MixModel():
             sys.exit(1)
 
         #train the second model
-        rfclf = models.rfDemo(x_tr_second, y_tr)
+        rfclf = models.rfdemo(x_tr_second, y_tr)
         if save_tag:
-            joblib.dump(rfclf, self.rfModelFile)
+            joblib.dump(rfclf, self.rfmodel_file)
 
     def predict(self):
          #load models
-        rfclf = joblib.load(self.rfModelFile)
+        rfclf = joblib.load(self.rfmodel_file)
 
         feature_models = dict()
-        for key in self.modelDict.keys():
-            if key != 'dictModel' and self.modelDict[key]:
-                clf = joblib.load(self.modelDir + '/' + key)
+        for key in self.model_dict.keys():
+            if key != 'dictModel' and self.model_dict[key]:
+                clf = joblib.load(self.model_dir + '/' + key)
                 feature_models.setdefault(key, clf)
 
-        self.crossTest(rfclf, feature_models)
-        #[datadict] = np.load(self.dataDictFile)
+        self.cross_test(rfclf, feature_models)
+        #[datadict] = np.load(self.data_dict_file)
         #self.test(datadict, lrclf, svmclf, rfclf)
 
     def demo(self):
         pass
 
 #    def test(self, datadict, lrclf, svmclf, rfclf):
-#        [title, content, result] = self.DT.readExcel(self.originDataFile)
+#        [title, content, result] = self.DT.read_excel(self.origin_data_file)
 #        PT = PreTreater()
-#        keydata = PT.getKeywords(content[0:150])
-#        testData = PT.createTrainDataDict(datadict, keydata)
+#        keydata = PT.get_keywords(content[0:150])
+#        testData = PT.create_train_data_dict(datadict, keydata)
 #
 #        fp = open('for_test.log', 'wb')
 #
@@ -234,19 +236,19 @@ class MixModel():
 #
 #        fp.close()
 
-    def crossTest(self, rfclf, feature_models, evalTag = True):
+    def cross_test(self, rfclf, feature_models, evalTag = True):
         #load data
-        [tt_idx, x_te, y_te] = np.load(self.dataFileTest)
-        if self.modelDict['lrTModel']:
-            [x_te_title, y_te] = np.load(self.dataFileTitleTest)
-        if self.modelDict['dictModel']:
-            dic_result = np.array(np.load(self.dictResult)[0])[tt_idx]
+        [tt_idx, x_te, y_te] = np.load(self.data_file_test)
+        if self.model_dict['lrTModel']:
+            [x_te_title, y_te] = np.load(self.data_file_title_test)
+        if self.model_dict['dictModel']:
+            dic_result = np.array(np.load(self.dict_result)[0])[tt_idx]
 
         #get features
         n_features = []
 
-        for key in self.modelDict.keys():
-            if self.modelDict[key]:
+        for key in self.model_dict.keys():
+            if self.model_dict[key]:
                 x_train = x_te
                 if key == 'dictModel':
                     n_features.append(dic_result)
@@ -260,11 +262,11 @@ class MixModel():
         if evalTag:
             self.evaluate(rf_result, y_te)
 
-        self.DT.writeData('../data/negative.xls', self.originDataFile,
+        self.DT.write_data('../data/negative.xls', self.origin_data_file,
                           tt_idx[rf_result == -1], y_te[rf_result == -1])
-        self.DT.writeData('../data/positive.xls', self.originDataFile,
+        self.DT.write_data('../data/positive.xls', self.origin_data_file,
                           tt_idx[rf_result == 1], y_te[rf_result == 1])
-        self.DT.writeData('../data/zeros.xls', self.originDataFile,
+        self.DT.write_data('../data/zeros.xls', self.origin_data_file,
                           tt_idx[rf_result == 0], y_te[rf_result == 0])
 
     def evaluate(self, x_te, y_te):
@@ -314,23 +316,20 @@ class MixModel():
         #print rfclf.score(np.column_stack((lr_result, svm_result)), result)
 
 if __name__ == '__main__':
-#    dataFile = '../data/data.npy'
-#    dataFileTrain = '../data/trainData.npy'
-#    dataFileTest = '../data/testData.npy'
-#    dataDictFile = '../data/dataDict.npy'
-#    originDataFile = '../data/data.xlsx'
-#    lrModelFile = '../models/lrModel'
-#    svmModelFile = '../models/svmModel'
-#    rfModelFile = '../models/rfModel'
+#    data_file = '../data/data.npy'
+#    data_file_train = '../data/trainData.npy'
+#    data_file_test = '../data/testData.npy'
+#    data_dict_file = '../data/dataDict.npy'
+#    origin_data_file = '../data/data.xlsx'
 
     MM = MixModel(4)
     start = time.time()
     #MM.pretreatment()
     print 'Pretreatment Cost: %s second' % str(time.time() - start)
-    MM.createRandomSeed(922)
+    MM.create_random_seed(922)
     for i in range(5):
-        MM.createTrainTest(idx_id = i)
-        MM.buildModel()
+        MM.create_train_test(idx_id = i)
+        MM.build_model()
         print 'build model Cost: %s second' % str(time.time() - start)
         MM.predict()
         print 'predict model Cost: %s second' % str(time.time() - start)

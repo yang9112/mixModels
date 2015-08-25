@@ -8,7 +8,7 @@ class PreTreater():
     def __init__(self):
         pass
 
-    def getKeywords(self, tables, all_tag = False):
+    def get_keywords(self, tables, all_tag = False):
         keys = []
         for content in tables:
             seg_list = pseg.cut(content.encode('utf8'))
@@ -27,7 +27,7 @@ class PreTreater():
 
         return keys
 
-    def getDict(self):
+    def getdict(self):
         directory = dict()
         fp = open(jieba.DEFAULT_DICT, 'rb')
         #fp = open('../data/score.txt', 'rb')
@@ -39,7 +39,7 @@ class PreTreater():
 
         return directory
 
-    def createTrainDataDict(self, directory, keyData):
+    def create_train_data_dict(self, directory, keyData):
         indptr = [0]
         indices = []
         data = []
@@ -56,7 +56,7 @@ class PreTreater():
         return csr_matrix((data, indices, indptr),
                           shape=(len(indptr) - 1, len(directory)), dtype=float)
 
-    def createTrainData(self, keyData):
+    def create_train_data(self, keyData):
         indptr = [0]
         indices = []
         data = []
@@ -74,9 +74,9 @@ class PreTreater():
 if __name__ == '__main__':
     from dataTreater import DataTreater
     DT = DataTreater()
-    [title, content, result] = DT.readExcel('../data/data.xlsx')
+    [title, content, result] = DT.read_excel('../data/data.xlsx')
     PT = PreTreater()
-    keydata = PT.getKeywords(content)
-    traindict = PT.getDict()
+    keydata = PT.get_keywords(content)
+    traindict = PT.getdict()
 
     #trainData = PT.createTrainDataDict(traindict, keydata)

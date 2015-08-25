@@ -17,20 +17,20 @@ class Models():
     def __init__(self):
         pass
 
-    def selectDemo(self, key, X, y):
+    def select_demo(self, key, X, y):
         if key == 'lrModel' or key == 'lrTModel':
-            clf = self.lrDemo(X, y)
+            clf = self.lrdemo(X, y)
         elif key == 'svmModel':
-            clf = self.svmDemo(X, y)
+            clf = self.svmdemo(X, y)
         elif key == 'rfModel':
-            clf = self.rfDemo(X, y)
+            clf = self.rfdemo(X, y)
         else:
             print 'Error: unkown name of key!'
             sys.exit(2)
 
         return clf
 
-    def lrDemo(self, X, y):
+    def lrdemo(self, X, y):
 #        scores = cross_validation.cross_val_score(
 #            self.lrclf, X, y, cv=5)
 #
@@ -38,7 +38,7 @@ class Models():
         self.lrclf.fit(X, y)
         return self.lrclf
 
-    def svmDemo(self, X, y):
+    def svmdemo(self, X, y):
 #        scores = cross_validation.cross_val_score(
 #            self.svmclf, X, y, cv=5)
 #
@@ -46,6 +46,6 @@ class Models():
         self.svmclf.fit(X, y)
         return self.svmclf
 
-    def rfDemo(self, X, y):
+    def rfdemo(self, X, y):
         self.rfclf.fit(X, y)
         return self.rfclf

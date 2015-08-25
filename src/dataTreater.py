@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-import re
-import os
-import csv
-import xlrd
-import xlwt
+import re, os, csv
+import xlrd, xlwt
 import numpy as np
 from xlutils.copy import copy
 
@@ -11,7 +8,7 @@ class DataTreater():
     def __init__(self):
         pass
 
-    def readCSV(self, filename):
+    def read_csv(self, filename):
         csvfile = file(filename, 'rb')
         reader = csv.DictReader(csvfile)
 
@@ -23,7 +20,7 @@ class DataTreater():
         csvfile.close()
         return data
 
-    def readExcel(self, filename):
+    def read_excel(self, filename):
         reader = xlrd.open_workbook(filename)
 
         #仅包括新闻
@@ -46,7 +43,7 @@ class DataTreater():
 
         return title_data, content_data, result_data
 
-    def readDictExcel(self, filename, originfile):
+    def read_dict_excel(self, filename, originfile):
         reader = xlrd.open_workbook(filename)
         reader_origin = xlrd.open_workbook(originfile)
 
@@ -71,7 +68,7 @@ class DataTreater():
 #            sheet.write(i, 1, dict_result[i])
 #        f.save('../data/excelFile.xls')
 
-    def writeData(self, filename_save, filename_data, idx, y_te):
+    def write_data(self, filename_save, filename_data, idx, y_te):
         #get row number
         nrows = 0
         if os.path.isfile(filename_save):
@@ -85,7 +82,7 @@ class DataTreater():
             wb = xlwt.Workbook()
             sheet = wb.add_sheet(u'sheet1',cell_overwrite_ok=True)
 
-        [content, title, result] = self.readExcel(filename_data)
+        [content, title, result] = self.read_excel(filename_data)
 
         content_write = np.array(content)[idx]
         for i in range(len(content_write)):
@@ -101,5 +98,5 @@ class DataTreater():
 
 if __name__ == '__main__':
     DT = DataTreater()
-    [title_data, content_data, result_data] = DT.readExcel('../data/data.xlsx')
-    DT.readDictExcel('../data/dicModelResult.xlsx', '../data/data.xlsx')
+    [title_data, content_data, result_data] = DT.read_excel('../data/data.xlsx')
+    DT.read_dict_excel('../data/dicModelResult.xlsx', '../data/data.xlsx')
