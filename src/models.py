@@ -3,6 +3,7 @@ import sys
 from sklearn import svm
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from dictScoreModel import DictScoreModel
 from sklearn import cross_validation
 
 reload(sys)
@@ -13,7 +14,8 @@ class Models():
     svmclf = svm.SVC(kernel='linear', C=1)
     svmclf_linear = svm.SVC(kernel='linear', C=1)
     rfclf = RandomForestClassifier(n_estimators=200, min_samples_split=1)
-
+    dsmclf = DictScoreModel()
+    
     def __init__(self):
         pass
 
@@ -24,6 +26,8 @@ class Models():
             clf = self.svmdemo(X, y)
         elif key == 'rfModel':
             clf = self.rfdemo(X, y)
+        elif key == 'scoreModel':
+            clf = self.dsmclf
         else:
             print 'Error: unkown name of key!'
             sys.exit(2)
