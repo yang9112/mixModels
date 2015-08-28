@@ -9,12 +9,14 @@ from preTreater import PreTreater
 from models import Models
 from sklearn import cross_validation
 from sklearn.externals import joblib
+from sklearn.ensemble import GradientBoostingClassifier
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 class MixModel():
     DT = DataTreater()
+    GBDT = GradientBoostingClassifier()
     """
     model_type:
     0: lrModel, svmModel
@@ -22,11 +24,14 @@ class MixModel():
     2: lrModel, lrTModel, svmModel
     3: lrModel, lrTModel, svmModel, dictModel
     4: lrModel, lrTmodel, dictModel
-    5: lrModel, lrTmodel, dictModel, scoreModel
+    5: lrModel, lrTmodel, dictModel, scoreModel, etc.
     ...
     """
     model_type = 0
-    model_dict = {'lrModel':1, 'svmModel':1, 'dictModel':0, 'lrTModel':0, 'scoreModel':0}
+    model_dict = {'lrModel':1, 'svmModel':1,
+                  'dictModel':0, 'lrTModel':0,
+                  'scoreModel':0, 'scoreTModel':0, 
+                  'gnbModel':0}
 
     def __init__(self,
                  model_type = 0,
@@ -40,6 +45,9 @@ class MixModel():
                  data_score_file = '../data/data_score.npy',
                  data_file_score_train = '../data/train_score_data.npy',
                  data_file_score_test = '../data/test_score_data.npy',
+                 data_score_title_file = '../data/data_score.npy',
+                 data_file_score_title_train = '../data/train_score_title_data.npy',
+                 data_file_score_title_test = '../data/test_score_title_data.npy',
                  wd_dict_file = '../data/wd_dict.npy',
                  wd_id_dict_file = '../data/wd_id_dict.npy',
                  id_score_dict_file = '../data/id_score_dict.npy',
@@ -62,6 +70,9 @@ class MixModel():
         self.data_score_file = data_score_file
         self.data_file_score_train = data_file_score_train
         self.data_file_score_test = data_file_score_test
+        self.data_score_title_file = data_score_title_file
+        self.data_file_score_title_train = data_file_score_title_train
+        self.data_file_score_title_test = data_file_score_title_test
         self.wd_dict_file = wd_dict_file
         self.wd_id_dict_file = wd_id_dict_file
         self.id_score_dict_file = id_score_dict_file
@@ -93,8 +104,9 @@ class MixModel():
         elif model_type == 4:
             self.model_dict.update({'lrModel':1, 'lrTModel':1, 'dictModel':1})
         elif model_type == 5:
-            self.model_dict.update({'lrModel':1, 'lrTModel':1,
-                                    'dictModel':0, 'scoreModel':1})
+            self.model_dict.update({'lrModel':1, 'lrTModel':1, 'svmModel':0,
+                                    'dictModel':0, 'scoreModel':1, 'scoreTModel':1,
+                                    'gnbModel':0})
 
     def pretreatment(self):
         #read data
@@ -110,18 +122,22 @@ class MixModel():
         wd_dict = PT.getdict()
         traindata = PT.create_train_data_dict(wd_dict, keydata)
 
-        #if self.model_dict['scoreModel']:
-        [wd_id_dict, id_score_dict] = PT.get_score_dict()
-        traindata_score = PT.create_train_data_dict(wd_id_dict, keydata)
-        np.save(self.id_score_dict_file, [id_score_dict])
-        np.save(self.data_score_file, [traindata_score])
-        #traindata = self.normalize_data(trainData)
-
         #if self.model_dict['lrTmodel']:
         keydata_title = PT.get_keywords(title, all_tag=True)
         train_title_data = PT.create_train_data_dict(wd_dict, keydata_title)
         np.save(self.wd_dict_file, [wd_dict])
         np.save(self.data_title_file, [train_title_data])
+
+        #if self.model_dict['scoreModel']:
+        [wd_id_dict, id_score_dict] = PT.get_score_dict()
+        traindata_score = PT.create_train_data_dict(wd_id_dict, keydata)
+        np.save(self.wd_id_dict_file, [wd_id_dict])
+        np.save(self.id_score_dict_file, [id_score_dict])
+        np.save(self.data_score_file, [traindata_score])
+
+        traindata_title_score = PT.create_train_data_dict(wd_id_dict, keydata_title)
+        np.save(self.data_score_title_file, [traindata_title_score])
+        #traindata = self.normalize_data(trainData)
 
         np.save(self.data_file, [traindata, np.array(result)])
         self.create_random_seed(len(result))
@@ -133,15 +149,15 @@ class MixModel():
         return data
 
     def create_random_seed(self, n_sample):
-        cv = cross_validation.ShuffleSplit(n_sample, n_iter=5,
-                                           test_size = 0.2,
-                                           random_state=random.randint(0,100))
-        tt_idx = [[m,n] for m,n in cv]
+#        cv = cross_validation.ShuffleSplit(n_sample, n_iter=5,
+#                                           test_size = 0.2,
+#                                           random_state=random.randint(0,100))
+#        tt_idx = [[m,n] for m,n in cv]
 
-#        sample_list = np.array(range(n_sample))
-#        random.shuffle(sample_list)
-#        cv = cross_validation.KFold(n_sample, n_folds=5)
-#        tt_idx = [[sample_list[m], sample_list[n]] for m,n in cv]
+        sample_list = np.array(range(n_sample))
+        random.shuffle(sample_list)
+        cv = cross_validation.KFold(n_sample, n_folds=5)
+        tt_idx = [[sample_list[m], sample_list[n]] for m,n in cv]
 
         np.save(self.train_test_idx, [tt_idx])
 
@@ -150,6 +166,8 @@ class MixModel():
             [title_data] = np.load(self.data_title_file)
         if self.model_dict['scoreModel']:
             [score_data] = np.load(self.data_score_file)
+        if self.model_dict['scoreTModel']:
+            [score_title_data] = np.load(self.data_score_title_file)
 
         [traindata, result] = np.load(self.data_file)
         [tt_idx] = np.load(self.train_test_idx)
@@ -173,6 +191,11 @@ class MixModel():
                 x_te_score = score_data[tt_idx[idx_id][1], :]
                 np.save(self.data_file_score_train, [x_tr_score])
                 np.save(self.data_file_score_test, [x_te_score])
+            if self.model_dict['scoreTModel']:
+                x_tr_title_score = score_title_data[tt_idx[idx_id][0], :]
+                x_te_title_score = score_title_data[tt_idx[idx_id][1], :]
+                np.save(self.data_file_score_title_train, [x_tr_title_score])
+                np.save(self.data_file_score_title_test, [x_te_title_score])
         else:
             x_tr = traindata
             x_te = result
@@ -191,6 +214,8 @@ class MixModel():
 #            dicResult[dicResult < 0] = -1
         if self.model_dict['scoreModel']:
             [x_tr_score] = np.load(self.data_file_score_train)
+        if self.model_dict['scoreTModel']:
+            [x_tr_score_title] = np.load(self.data_file_score_title_train)
 
         mid = int(x_tr.shape[0]/2)
         #train model
@@ -211,16 +236,25 @@ class MixModel():
                 x_train = x_tr_title
             elif key == 'scoreModel':
                 x_train = x_tr_score
+            elif key == 'scoreTModel':
+                x_train = x_tr_score_title
 
-            if self.model_dict[key]:
-                clf = models.select_demo(key, x_train[:mid, :], y_tr[:mid])
+            clf = models.select_demo(key, x_train[:mid, :], y_tr[:mid])
+            if key == 'lrModel' or key == 'lrTModel':
+                mid_to_end = list(clf.predict_proba(x_train[mid:,:]))
+            else:
                 mid_to_end = list(clf.predict(x_train[mid:,:]))
-                clf = models.select_demo(key, x_train[mid:, :], y_tr[mid:])
+            clf = models.select_demo(key, x_train[mid:, :], y_tr[mid:])
+            if key == 'lrModel' or key == 'lrTModel':
+                top_to_mid = list(clf.predict_proba(x_train[:mid, :]))
+            else:
                 top_to_mid = list(clf.predict(x_train[:mid, :]))
-                n_features.append(np.array(top_to_mid + mid_to_end))
-                clf = models.select_demo(key, x_train, y_tr)
-                if save_tag and key != 'scoreModel':
-                    joblib.dump(clf, self.model_dir + '/' + key)
+            n_features.append(np.array(top_to_mid + mid_to_end))
+
+            #get the true model
+            clf = models.select_demo(key, x_train, y_tr)
+            if save_tag and key != 'scoreModel' and key != 'scoreTModel':
+                joblib.dump(clf, self.model_dir + '/' + key)
 
         if len(n_features) > 1:
             x_tr_second = np.column_stack(tuple(n_features))
@@ -228,25 +262,79 @@ class MixModel():
             print 'Error: less models'
             sys.exit(1)
 
+        self.GBDT.fit(x_tr_second, y_tr)
+        print self.GBDT.feature_importances_
         #train the second model
         rfclf = models.rfdemo(x_tr_second, y_tr)
         if save_tag:
             joblib.dump(rfclf, self.rfmodel_file)
+            
+    def pre_data_treate(self, filename):
+        test_title, test_content, empty = self.DT.read_excel(filename)
+        [wd_dict] = np.load(self.wd_dict_file)
+        [wd_score_dict] = np.load(self.wd_id_dict_file)
 
-    def predict(self):
+        PT = PreTreater()
+        keydata = PT.get_keywords(test_content)
+        testdata = PT.create_train_data_dict(wd_dict, keydata)
+        test_score_data = PT.create_train_data_dict(wd_score_dict, keydata)      
+        
+        keydata_title = PT.get_keywords(test_title)
+        testdata_title = PT.create_train_data_dict(wd_dict, keydata_title)
+        test_score_data_title = PT.create_train_data_dict(wd_score_dict, keydata_title)
+
+        return [testdata, testdata_title, test_score_data, test_score_data_title]        
+        
+    def predict(self, pred_file = None):
          #load models
         rfclf = joblib.load(self.rfmodel_file)
 
         feature_models = dict()
+        disable_models = ['dictModel', 'scoreModel', 'scoreTModel']
         for key in self.model_dict.keys():
-            if self.model_dict[key] and (key not in ['dictModel', 'scoreModel']):
+            if self.model_dict[key] and (key not in disable_models):
                 clf = joblib.load(self.model_dir + '/' + key)
                 feature_models.setdefault(key, clf)
-        self.cross_test(rfclf, feature_models)
-        #[datadict] = np.load(self.wd_dict_file)
-
-    def demo(self):
-        pass
+        
+        if pred_file != None:
+            test_data = self.pre_data_treate(pred_file)
+            [x_te, x_te_title, x_te_score, x_te_score_title] = test_data
+            
+            #get features
+            n_features = []
+    
+            for key in self.model_dict.keys():
+                if self.model_dict[key]:
+                    x_test = x_te
+                    if key == 'scoreModel':
+                        n_features.append(Models().select_demo(key, 0, 0).predict(x_te_score))
+                        continue
+                    elif key == 'scoreTModel':
+                        n_features.append(Models().select_demo(key, 0, 0).predict(x_te_score_title))
+                        continue
+                    elif key == 'lrTModel':
+                        x_test = x_te_title
+    
+                    if key == 'lrModel' or key == 'lrTModel':
+                        n_features.append(feature_models[key].predict_proba(x_test))
+                    else:
+                        n_features.append(feature_models[key].predict(x_test))
+            
+            #start the second RF model
+            x_second_te = np.column_stack(tuple(n_features))
+            rf_result = rfclf.predict(x_second_te)
+            rf_result_proba = rfclf.predict_proba(x_second_te)
+    
+            #evaluate the precision of model
+            rf_rp = np.copy(rf_result)
+            rf_rp[rf_result_proba.max(axis=1) < 0.5] = 0
+    
+            self.DT.write_data('../data/negative.xls', pred_file,
+                              range(rf_result.shape[0]), rf_result)
+            self.DT.write_data('../data/negative1.xls', pred_file,
+                              range(rf_result.shape[0]), rf_rp)
+        else:
+            return self.cross_test(rfclf, feature_models)
 
     def cross_test(self, rfclf, feature_models, evalTag = True):
         #load data
@@ -255,6 +343,8 @@ class MixModel():
             [x_te_title, y_te] = np.load(self.data_file_title_test)
         if self.model_dict['scoreModel']:
             [x_te_score] = np.load(self.data_file_score_test)
+        if self.model_dict['scoreTModel']:
+            [x_te_score_title] = np.load(self.data_file_score_title_test)
         if self.model_dict['dictModel']:
             dic_result = np.array(np.load(self.dict_result)[0])[tt_idx]
 #            dic_result[dic_result > 0] = 1
@@ -272,21 +362,36 @@ class MixModel():
                 elif key == 'scoreModel':
                     n_features.append(Models().select_demo(key, 0, 0).predict(x_te_score))
                     continue
+                elif key == 'scoreTModel':
+                    n_features.append(Models().select_demo(key, 0, 0).predict(x_te_score_title))
+                    continue
                 elif key == 'lrTModel':
-                    x_test = x_te_title 
-                n_features.append(feature_models[key].predict(x_test))
+                    x_test = x_te_title
 
-        rf_result = rfclf.predict(np.column_stack(tuple(n_features)))
+                if key == 'lrModel' or key == 'lrTModel':
+                    n_features.append(feature_models[key].predict_proba(x_test))
+                else:
+                    n_features.append(feature_models[key].predict(x_test))
+
+        #start the second RF model
+        x_second_te = np.column_stack(tuple(n_features))
+        rf_result = rfclf.predict(x_second_te)
+        rf_result_proba = rfclf.predict_proba(x_second_te)
+
+        #evaluate the precision of model
+        rf_rp = np.copy(rf_result)
+        rf_rp[rf_result_proba.max(axis=1) < 0.5] = 0
 
         if evalTag:
             self.evaluate(rf_result, y_te)
 
-        self.DT.write_data('../data/negative.xls', self.origin_data_file,
-                          tt_idx[rf_result == -1], y_te[rf_result == -1])
-        self.DT.write_data('../data/positive.xls', self.origin_data_file,
-                          tt_idx[rf_result == 1], y_te[rf_result == 1])
-        self.DT.write_data('../data/zeros.xls', self.origin_data_file,
-                          tt_idx[rf_result == 0], y_te[rf_result == 0])
+#        self.DT.write_data('../data/negative.xls', self.origin_data_file,
+#                          tt_idx[rf_result == -1], y_te[rf_result == -1])
+#        self.DT.write_data('../data/positive.xls', self.origin_data_file,
+#                          tt_idx[rf_result == 1], y_te[rf_result == 1])
+#        self.DT.write_data('../data/zeros.xls', self.origin_data_file,
+#                          tt_idx[rf_result == 0], y_te[rf_result == 0])
+        return rf_result, y_te, rf_rp
 
     def evaluate(self, x_te, y_te):
         #evaluate the result of models
@@ -334,6 +439,9 @@ class MixModel():
         print '正面消息的F值：' + str(F_score)
         #print rfclf.score(np.column_stack((lr_result, svm_result)), result)
 
+        def demo(self):
+            pass
+
 if __name__ == '__main__':
 #    data_file = '../data/data.npy'
 #    data_file_train = '../data/trainData.npy'
@@ -341,14 +449,25 @@ if __name__ == '__main__':
 #    wd_dict_file = '../data/dataDict.npy'
 #    origin_data_file = '../data/data.xlsx'
 
+    y_predict = []
+    y_predict_proba = []
+    y_true = []
     MM = MixModel(5)
     start = time.time()
     #MM.pretreatment()
-    print 'Pretreatment Cost: %s second' % str(time.time() - start)
-    MM.create_random_seed(922)
-    for i in range(5):
-        MM.create_train_test(idx_id = i)
-        MM.build_model()
-        print 'build model Cost: %s second' % str(time.time() - start)
-        MM.predict()
-        print 'predict model Cost: %s second' % str(time.time() - start)
+    MM.predict('../data/test_data.xlsx')
+    
+#    print 'Pretreatment Cost: %s second' % str(time.time() - start)
+#    MM.create_random_seed(922)
+#    for i in range(5):
+#        MM.create_train_test(idx_id = i)
+#        MM.build_model()
+#        print 'build model Cost: %s second' % str(time.time() - start)
+#        rf_result, y_te, rf_rp = MM.predict()
+#        print 'predict model Cost: %s second' % str(time.time() - start)
+#        y_predict.extend(rf_result)
+#        y_predict_proba.extend(rf_rp)
+#        y_true.extend(y_te)
+#
+#    MM.evaluate(np.array(y_predict), np.array(y_true))
+#    MM.evaluate(np.array(y_predict_proba), np.array(y_true))

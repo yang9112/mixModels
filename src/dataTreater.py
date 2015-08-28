@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-import re, os, csv
+import re, os, csv, sys
 import xlrd, xlwt
 import numpy as np
 from xlutils.copy import copy
+
+csv.field_size_limit(sys.maxint)
 
 class DataTreater():
     def __init__(self):
@@ -10,15 +12,18 @@ class DataTreater():
 
     def read_csv(self, filename):
         csvfile = file(filename, 'rb')
-        reader = csv.DictReader(csvfile)
+        reader = csv.reader(csvfile)
 
-        data = []
+        title_data = []
+        content_data = []
+        
         for line in reader:
-            line['content'] = re.sub('<.*?>', '', line['content'])
-            data.append(line)
-
+            [url, title, content] = line
+            title_data.append(title)
+            content_data.append(content)
+            
         csvfile.close()
-        return data
+        return title_data, content_data
 
     def read_excel(self, filename):
         reader = xlrd.open_workbook(filename)
@@ -38,7 +43,7 @@ class DataTreater():
             title_data.append(row_values[1])
             content_data.append(re.sub('<.*?>', '', row_values[2]))
 
-            if row_values[3] != '':
+            if len(row_values) > 3 and row_values[3] != '':
                 result_data.append(row_values[3])
 
         return title_data, content_data, result_data
@@ -98,5 +103,5 @@ class DataTreater():
 
 if __name__ == '__main__':
     DT = DataTreater()
-    [title_data, content_data, result_data] = DT.read_excel('../data/data.xlsx')
-    DT.read_dict_excel('../data/dicModelResult.xlsx', '../data/data.xlsx')
+    [title_data, content_data] = DT.read_csv('../data/test_data.csv')
+#    DT.read_dict_excel('../data/dicModelResult.xlsx', '../data/data.xlsx')

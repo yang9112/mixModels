@@ -37,20 +37,21 @@ class DictScoreModel():
             
     def cacul(self, x_te, id_score_dict):
         sum_score = np.zeros((x_te.shape[0]), dtype=float)
-        sum_score_cp = np.zeros((x_te.shape[0]), dtype=float)
+#        sum_score_cp = np.zeros((x_te.shape[0]), dtype=float)
         id_score_vector = np.array(np.array(id_score_dict.values())[:, 1], dtype=float)
         
         #only work for the sparse data
         for row_idx in range(x_te.shape[0]):
             row, col = x_te[row_idx].nonzero()
 #            sum_score[row_idx] = np.dot(id_score_vector[col], x_te[row_idx, :].data)
-            sum_score[row_idx] = np.mean(id_score_vector[col])
+            sum_score[row_idx] = np.sum(id_score_vector[col])
 
-        pos_mean = np.mean(sum_score[sum_score > 0])
-        neg_mean = np.mean(sum_score[sum_score < 0])
-        sum_score_cp[sum_score > pos_mean] = 1
-        sum_score_cp[sum_score < neg_mean] = -1
-        return sum_score_cp
+#        pos_mean = np.mean(sum_score[sum_score > 0])
+#        neg_mean = np.mean(sum_score[sum_score < 0])
+#        sum_score_cp[sum_score > pos_mean] = 1
+#        sum_score_cp[sum_score < neg_mean] = -1
+        sum_score = sum_score/(max(sum_score) - min(sum_score))
+        return sum_score
     
 if __name__ == '__main__':
     DSM = DictScoreModel()
